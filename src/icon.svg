@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <linearGradient id="ring" x1="10" y1="10" x2="90" y2="90" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#14B8A6"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+    <mask id="badge-cut" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
+      <rect width="100" height="100" fill="#fff"/>
+      <rect x="58.18" y="45.5" width="46" height="44.5" rx="11" fill="#000"/>
+    </mask>
+    <mask id="cal-cut" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
+      <rect width="100" height="100" fill="#fff"/>
+      <rect x="63.18" y="64.75" width="36" height="2.5" fill="#000"/>
+      <rect x="76.18" y="71.5" width="10" height="6.5" rx="1.5" fill="#000"/>
+    </mask>
+  </defs>
+  <!-- recurrence ring -->
+  <g mask="url(#badge-cut)">
+    <path d="M18.82 68A36 36 0 0 1 56.25 14.55M78.75 28.33A36 36 0 0 1 43.75 85.45" stroke="url(#ring)" stroke-width="13" stroke-linecap="round"/>
+    <path d="M58.51 1.74L72.01 17.33L53.99 27.35ZM41.49 98.26L27.99 82.67L46.01 72.65Z" fill="url(#ring)" stroke="url(#ring)" stroke-width="2" stroke-linejoin="round"/>
+  </g>
+  <!-- calendar -->
+  <g mask="url(#cal-cut)" fill="#2563EB">
+    <rect x="63.68" y="54.5" width="35" height="30" rx="6.5"/>
+    <path d="M74.78 51.5v7M87.58 51.5v7" stroke="#2563EB" stroke-width="3.5" stroke-linecap="round"/>
+  </g>
+</svg>
