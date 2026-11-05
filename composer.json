@@ -1,0 +1,41 @@
+{
+  "name": "ee-forge/craft-recurrence",
+  "description": "Recurring dates for native Craft entries, with indexed occurrences, dated URLs, per-date overrides and ICS feeds.",
+  "type": "craft-plugin",
+  "version": "1.0.0",
+  "license": "proprietary",
+  "authors": [
+    {
+      "name": "EE Forge",
+      "homepage": "https://ee-forge.com"
+    }
+  ],
+  "require": {
+    "php": ">=8.2",
+    "craftcms/cms": "^5.6.0",
+    "rlanvin/php-rrule": "^2.5"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^11.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "eeforge\\recurrence\\": "src/"
+    }
+  },
+  "extra": {
+    "handle": "recurrence",
+    "name": "Recurrence",
+    "developer": "EE Forge",
+    "developerUrl": "https://ee-forge.com",
+    "documentationUrl": "https://ee-forge.com",
+    "class": "eeforge\\recurrence\\Plugin"
+  },
+  "config": {
+    "allow-plugins": {
+      "craftcms/plugin-installer": true,
+      "yiisoft/yii2-composer": true
+    },
+    "sort-packages": true
+  }
+}

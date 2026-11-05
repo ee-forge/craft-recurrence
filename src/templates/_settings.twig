@@ -1,0 +1,154 @@
+{#
+ # Settings → Plugins → Recurrence. Craft namespaces the inputs under
+ # `settings[…]` and saves the posted keys to project config. Anything set in
+ # config/recurrence.php is shown disabled with a warning.
+ #
+ # Rendered by Plugin::settingsHtml(). Variables:
+ #   settings           the settings in effect (config file values included)
+ #   overrides          keys set in config/recurrence.php
+ #   stored             the values saved in project config, re-posted for locked keys
+ #   descriptionFields  options for the calendar description source
+ #   locationFields     options for the calendar location source
+ #}
+{% import '_includes/forms' as forms %}
+
+{% macro configWarning(setting) -%}
+    {{ 'This is being overridden by the `{setting}` setting in `config/recurrence.php`.'|t('recurrence', {setting: setting})|md(inlineOnly=true) }}
+{%- endmacro %}
+
+{% from _self import configWarning %}
+
+{# Locked inputs aren't posted; re-post their stored values so the save keeps them. #}
+{% for key in overrides|filter(key => stored[key] is defined) %}
+    {{ hiddenInput(key, stored[key] is same as(true) ? '1' : (stored[key] is same as(false) ? '' : stored[key] ?? '')) }}
+{% endfor %}
+
+<h2>{{ 'Occurrence Settings'|t('recurrence') }}</h2>
+<p class="light">{{ 'Changing these rebuilds every event’s stored dates in the background.'|t('recurrence') }}</p>
+
+{{ forms.textField({
+    label: 'Horizon'|t('recurrence'),
+    instructions: 'How many months ahead to store dates of open-ended series for listings. `craft recurrence/occurrences/extend` (daily cron) keeps it moving.'|t('recurrence'),
+    id: 'horizonMonths',
+    name: 'horizonMonths',
+    type: 'number',
+    min: 1,
+    size: 6,
+    value: settings.horizonMonths,
+    disabled: 'horizonMonths' in overrides,
+    warning: 'horizonMonths' in overrides ? configWarning('horizonMonths'),
+    errors: settings.getErrors('horizonMonths'),
+}) }}
+
+{{ forms.textField({
+    label: 'Pruning'|t('recurrence'),
+    instructions: 'How many months of past dates stay stored for listings. Older dated URLs still resolve.'|t('recurrence'),
+    id: 'pastMonths',
+    name: 'pastMonths',
+    type: 'number',
+    min: 1,
+    size: 6,
+    value: settings.pastMonths,
+    disabled: 'pastMonths' in overrides,
+    warning: 'pastMonths' in overrides ? configWarning('pastMonths'),
+    errors: settings.getErrors('pastMonths'),
+}) }}
+
+{{ forms.textField({
+    label: 'Maximum Occurrences Per Entry'|t('recurrence'),
+    id: 'maxOccurrences',
+    name: 'maxOccurrences',
+    type: 'number',
+    min: 1,
+    max: 10000,
+    size: 6,
+    value: settings.maxOccurrences,
+    disabled: 'maxOccurrences' in overrides,
+    warning: 'maxOccurrences' in overrides ? configWarning('maxOccurrences'),
+    errors: settings.getErrors('maxOccurrences'),
+}) }}
+
+<hr>
+
+<h2>{{ 'Calendar Files'|t('recurrence') }}</h2>
+
+{#
+ # A calendar detail (description or location): a source select (None, a
+ # field, or Custom template…) and the template box it reveals. `kind` maps to
+ # the `ics{Kind}Source` and `ics{Kind}Template` settings; `fields` comes from
+ # IcsDetails::fieldOptions().
+ #}
+{% macro icsDetail(kind, label, instructions, templateInstructions, fields, settings, overrides) %}
+    {% from _self import configWarning %}
+    {% import '_includes/forms' as forms %}
+    {% set sourceKey = "ics#{kind|capitalize}Source" %}
+    {% set templateKey = "ics#{kind|capitalize}Template" %}
+    {% set source = attribute(settings, sourceKey) %}
+    {% set options = [{label: 'None'|t('recurrence'), value: ''}] %}
+    {% if fields %}
+        {% set options = options|merge([{optgroup: 'Fields'|t('recurrence')}])|merge(fields) %}
+    {% endif %}
+    {# A field that has since been deleted or removed from the layouts stays visible rather than silently becoming None. #}
+    {% if source not in ['', 'template'] and source not in fields|column('value') %}
+        {% set options = options|merge([{label: 'Missing field'|t('recurrence'), value: source}]) %}
+    {% endif %}
+    {% set options = options|merge([{optgroup: 'Other'|t('recurrence')}, {label: 'Custom template…'|t('recurrence'), value: 'template'}]) %}
+
+    {{ forms.selectField({
+        label: label,
+        instructions: instructions,
+        id: sourceKey,
+        name: sourceKey,
+        options: options,
+        value: source,
+        toggle: true,
+        targetPrefix: ".ics-#{kind}-",
+        disabled: sourceKey in overrides,
+        warning: sourceKey in overrides ? configWarning(sourceKey),
+        errors: settings.getErrors(sourceKey),
+    }) }}
+
+    <div class="ics-{{ kind }}-template{{ source != 'template' ? ' hidden' }}">
+        {{ forms.textareaField({
+            label: '{label} template'|t('recurrence', {label: label}),
+            instructions: templateInstructions,
+            id: templateKey,
+            name: templateKey,
+            class: 'code',
+            rows: 3,
+            value: attribute(settings, templateKey),
+            disabled: templateKey in overrides,
+            warning: templateKey in overrides ? configWarning(templateKey),
+            errors: settings.getErrors(templateKey),
+        }) }}
+    </div>
+{% endmacro %}
+
+{% from _self import icsDetail %}
+
+{{ icsDetail(
+    'description',
+    'Calendar description'|t('recurrence'),
+    'Text for each event’s description in .ics files. Rich text keeps its paragraphs.'|t('recurrence'),
+    'An object template rendered against each entry, e.g. `{summary}`. HTML is converted to plain text.'|t('recurrence'),
+    descriptionFields, settings, overrides,
+) }}
+
+{{ icsDetail(
+    'location',
+    'Calendar location'|t('recurrence'),
+    'Text for each event’s location in .ics files. An Addresses field gives the formatted address and a map pin; an Entries field gives the related entry’s title.'|t('recurrence'),
+    'An object template rendered against each entry, e.g. `{{ object.venue.one().title ?? \'\' }}`.'|t('recurrence'),
+    locationFields, settings, overrides,
+) }}
+
+{{ forms.textField({
+    label: 'Feed name'|t('recurrence'),
+    instructions: 'Calendar name for subscribed section feeds. `{section}` becomes the section name.'|t('recurrence'),
+    id: 'icsFeedName',
+    name: 'icsFeedName',
+    value: settings.icsFeedName,
+    disabled: 'icsFeedName' in overrides,
+    warning: 'icsFeedName' in overrides ? configWarning('icsFeedName'),
+    errors: settings.getErrors('icsFeedName'),
+}) }}
