@@ -299,14 +299,32 @@ class ExpanderTest extends TestCase
             'overrides' => ['2026-11-12' => ['cancelled' => true, 'note' => 'Snow day']],
         ]);
 
-        $occ = $s->between($this->at('2026-11-10'), $this->at('2026-11-20'));
+        $occ = $s->between($this->at('2026-11-10'), $this->at('2026-11-20'), includeCancelled: true);
         $this->assertSame(['2026-11-12', '2026-11-19'], $this->keys($occ));
         $this->assertTrue($occ[0]->cancelled);
         $this->assertSame('Snow day', $occ[0]->note);
 
         $this->assertSame('2026-11-19', $s->next(now: $this->at('2026-11-10'))?->key);
         $this->assertSame('2026-11-12', $s->next(includeCancelled: true, now: $this->at('2026-11-10'))?->key);
-        $this->assertCount(1, $s->between($this->at('2026-11-10'), $this->at('2026-11-20'), includeCancelled: false));
+    }
+
+    public function testCancelledDatesAreLeftOutByDefault(): void
+    {
+        $s = $this->schedule([
+            'start' => '2026-11-05T19:00',
+            'end' => '2026-11-05T20:00',
+            'freq' => 'weekly',
+            'ends' => 'count',
+            'count' => 3,
+            'overrides' => ['2026-11-12' => ['cancelled' => true]],
+        ]);
+        $now = $this->at('2026-11-01');
+
+        $this->assertSame(['2026-11-05', '2026-11-19'], $this->keys($s->between($this->at('2026-11-01'), $this->at('2026-12-01'))));
+        $this->assertSame(['2026-11-05', '2026-11-19'], $this->keys($s->upcoming(now: $now)));
+        $this->assertSame(['2026-11-05', '2026-11-12', '2026-11-19'], $this->keys($s->upcoming(includeCancelled: true, now: $now)));
+        $this->assertSame('2026-11-19', $s->previous(now: $this->at('2027-01-01'))?->key);
+        $this->assertSame('2026-11-12', $s->previous(includeCancelled: true, now: $this->at('2026-11-15'))?->key);
     }
 
     public function testRescheduledOccurrenceKeepsItsOriginalKey(): void
@@ -449,6 +467,73 @@ class ExpanderTest extends TestCase
         $s->withLimits(24, 12, 5);
 
         $this->assertCount(5, $s->between($this->at('2026-01-01'), $this->at('2027-01-01')));
+    }
+
+    public function testLatestKeepsTheLastDatesUnderTheCap(): void
+    {
+        $s = $this->schedule(['start' => '2026-01-01T08:00', 'freq' => 'daily']);
+        $s->withLimits(24, 12, 5);
+
+        $this->assertSame(
+            ['2026-12-27', '2026-12-28', '2026-12-29', '2026-12-30', '2026-12-31'],
+            $this->starts($s->between($this->at('2026-01-01'), $this->at('2027-01-01'), latest: true), 'Y-m-d'),
+        );
+        $this->assertSame(
+            ['2026-12-30', '2026-12-31'],
+            $this->starts($s->between($this->at('2026-01-01'), $this->at('2027-01-01'), 2, latest: true), 'Y-m-d'),
+        );
+    }
+
+    public function testPreviousOfASeriesLongerThanTheCapIsItsLatestDate(): void
+    {
+        $s = $this->schedule(['start' => '2026-01-01T08:00', 'freq' => 'daily']);
+        $s->withLimits(24, 12, 5);
+
+        $this->assertSame('2026-12-31', $s->previous(now: $this->at('2027-01-01 07:00'))?->key);
+    }
+
+    public function testOccurrencesTableKeepsUpcomingDatesFirst(): void
+    {
+        // A daily series running for a year, with room for 10 dates: the
+        // 10 soonest upcoming ones, and no past dates.
+        $s = $this->schedule(['start' => '2025-06-01T08:00', 'freq' => 'daily']);
+        $s->withLimits(18, 12, 10);
+        $now = $this->at('2026-06-01 12:00');
+
+        $dates = $this->starts($s->occurrencesTableDates($now), 'Y-m-d');
+        $this->assertCount(10, $dates);
+        $this->assertSame('2026-06-02', $dates[0]);
+        $this->assertSame('2026-06-11', end($dates));
+    }
+
+    public function testOccurrencesTableFillsWithTheMostRecentPastDates(): void
+    {
+        // Three weekly dates left, room for five: the two latest past dates
+        // fill the rest, oldest first. Cancelled dates are stored too.
+        $s = $this->schedule([
+            'start' => '2026-01-01T19:00',
+            'end' => '2026-01-01T20:00',
+            'freq' => 'weekly',
+            'ends' => 'until',
+            'until' => '2026-03-26',
+            'overrides' => ['2026-03-12' => ['cancelled' => true]],
+        ]);
+        $s->withLimits(18, 12, 5);
+        $now = $this->at('2026-03-10 12:00');
+
+        $occ = $s->occurrencesTableDates($now);
+        $this->assertSame(['2026-02-26', '2026-03-05', '2026-03-12', '2026-03-19', '2026-03-26'], $this->keys($occ));
+        $this->assertTrue($occ[2]->cancelled);
+    }
+
+    public function testOccurrencesTableCountsAnOngoingDateOnce(): void
+    {
+        $s = $this->schedule(['start' => '2026-01-01T19:00', 'end' => '2026-01-01T21:00', 'freq' => 'weekly', 'ends' => 'count', 'count' => 4]);
+        $s->withLimits(18, 12, 3);
+        // During the third date (Jan 15, 19:00–21:00).
+        $now = $this->at('2026-01-15 20:00');
+
+        $this->assertSame(['2026-01-08', '2026-01-15', '2026-01-22'], $this->keys($s->occurrencesTableDates($now)));
     }
 
     public function testExpandingWithoutLimitsFails(): void

@@ -14,7 +14,7 @@ use eeforge\recurrence\services\Expander;
  *
  * A recurring schedule becomes one VEVENT with RRULE/RDATE/EXDATE, so calendar
  * apps treat it as a series. Rescheduled or annotated occurrences become extra
- * VEVENTs with the same UID and a RECURRENCE-ID; canceled occurrences become
+ * VEVENTs with the same UID and a RECURRENCE-ID; cancelled occurrences become
  * EXDATEs. Times carry a TZID backed by a generated VTIMEZONE.
  *
  * Usage (IcsController): `new Ics($name)`, addSchedule() per entry, then
@@ -68,7 +68,7 @@ class Ics
         ]);
 
         // One-off events: write the (possibly overridden) occurrence directly,
-        // marking it canceled rather than leaving it out.
+        // marking it cancelled rather than leaving it out.
         if (!$schedule->getIsRecurring()) {
             $occ = Expander::find($schedule, $first->format('Y-m-d'));
             if (!$occ) {
@@ -114,7 +114,7 @@ class Ics
         $this->_coverTimeZone($tz, $first, $horizon);
 
         // Moved or annotated occurrences override their instance of the
-        // series. Canceled ones are already EXDATEs, so skipped here.
+        // series. Cancelled ones are already EXDATEs, so skipped here.
         foreach ($schedule->overrides as $key => $override) {
             if (!empty($override['cancelled']) || (empty($override['start']) && empty($override['note']))) {
                 continue;
@@ -172,7 +172,7 @@ class Ics
     // -------------------------------------------------------------------------
 
     /**
-     * Original starts of excluded dates and canceled occurrences, for the
+     * Original starts of excluded dates and cancelled occurrences, for the
      * series' EXDATE. Calendar apps need the exact start each one removes.
      */
     private function _excludedStarts(Schedule $schedule): array
@@ -193,7 +193,7 @@ class Ics
                 }
             }
         }
-        // Canceled dates are EXDATEs too: apps have no "canceled instance" state.
+        // Cancelled dates are EXDATEs too: apps have no "cancelled instance" state.
         foreach ($schedule->overrides as $key => $override) {
             if (!empty($override['cancelled']) && ($occ = Expander::find($schedule, $key))) {
                 $starts[] = $occ->originalStart;

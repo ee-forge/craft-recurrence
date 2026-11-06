@@ -537,9 +537,11 @@ class Schedule implements JsonSerializable, Stringable
         if (!$first || $first > $now) {
             return null;
         }
-        // Expand from the first date to now; the last one that has started wins.
+        // Expand from the first date to now, keeping the latest dates (a
+        // long-running series has more than the cap); the last one that has
+        // started wins.
         $past = array_filter(
-            Expander::between($this, $first, $now, null, $includeCancelled),
+            Expander::between($this, $first, $now, null, $includeCancelled, latest: true),
             fn(Occurrence $o) => $o->start <= $now,
         );
         return $past ? end($past) : null;
@@ -547,11 +549,12 @@ class Schedule implements JsonSerializable, Stringable
 
     /**
      * Occurrences that haven't ended yet, soonest first, up to the horizon.
+     * Cancelled dates are left out unless asked for, as everywhere else.
      * Used by templates (`entry.field.upcoming(5)`) and the CP preview.
      *
      * @return Occurrence[]
      */
-    public function upcoming(int $limit = 10, bool $includeCancelled = true, ?DateTimeInterface $now = null): array
+    public function upcoming(int $limit = 10, bool $includeCancelled = false, ?DateTimeInterface $now = null): array
     {
         $now = $now ? DateTimeImmutable::createFromInterface($now) : new DateTimeImmutable();
         return Expander::between($this, $now, $this->horizonEnd($now), $limit, $includeCancelled);
@@ -560,12 +563,14 @@ class Schedule implements JsonSerializable, Stringable
     /**
      * Occurrences overlapping [$from, $to), ordered by start. The general form
      * behind the other shortcuts; also used by the occurrences service.
+     * Cancelled dates are left out unless asked for. With more dates than the
+     * limit (or maxOccurrences), the first are kept, or the last when `$latest`.
      *
      * @return Occurrence[]
      */
-    public function between(DateTimeInterface $from, DateTimeInterface $to, ?int $limit = null, bool $includeCancelled = true): array
+    public function between(DateTimeInterface $from, DateTimeInterface $to, ?int $limit = null, bool $includeCancelled = false, bool $latest = false): array
     {
-        return Expander::between($this, $from, $to, $limit, $includeCancelled);
+        return Expander::between($this, $from, $to, $limit, $includeCancelled, $latest);
     }
 
     /**
@@ -579,7 +584,7 @@ class Schedule implements JsonSerializable, Stringable
 
     /**
      * The range the occurrences table should hold, relative to now: from
-     * `pastMonths` ago to the horizon. Used by Occurrences::rebuild().
+     * `pastMonths` ago to the horizon. Used by occurrencesTableDates().
      *
      * @return array{0: DateTimeImmutable, 1: DateTimeImmutable}
      */
@@ -587,6 +592,41 @@ class Schedule implements JsonSerializable, Stringable
     {
         $now = $now ? DateTimeImmutable::createFromInterface($now) : new DateTimeImmutable();
         return [$now->modify("-{$this->getPastMonths()} months"), $this->horizonEnd($now)];
+    }
+
+    /**
+     * The dates the occurrences table should hold, oldest first, cancelled
+     * ones included so listings can label them. maxOccurrences caps the total,
+     * and upcoming dates come first: every one up to the horizon (the soonest,
+     * if they alone reach the cap), then the most recent past dates in what's
+     * left. Capping the window from its start instead would keep a daily
+     * series' year-old dates and drop its future ones. Used by
+     * Occurrences::rebuild().
+     *
+     * @return Occurrence[]
+     */
+    public function occurrencesTableDates(?DateTimeInterface $now = null): array
+    {
+        $now = $now ? DateTimeImmutable::createFromInterface($now) : new DateTimeImmutable();
+        [$from, $to] = $this->occurrencesTableWindow($now);
+
+        // Dates that haven't ended, ongoing ones included.
+        $upcoming = $this->between($now, $to, includeCancelled: true);
+
+        $remaining = $this->getMaxOccurrences() - count($upcoming);
+        if ($remaining <= 0) {
+            return $upcoming;
+        }
+
+        // Ongoing dates also overlap the past range; ask for that many extra
+        // and drop them, so past dates fill the remaining budget exactly.
+        $ongoing = count(array_filter($upcoming, fn(Occurrence $o) => $o->start < $now));
+        $past = array_filter(
+            $this->between($from, $now, $remaining + $ongoing, true, latest: true),
+            fn(Occurrence $o) => $o->end < $now,
+        );
+
+        return array_merge(array_slice(array_values($past), -$remaining), $upcoming);
     }
 
     /**

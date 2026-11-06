@@ -56,11 +56,10 @@ class Occurrences extends Component
         // horizon) into one row per date. An empty field writes no rows,
         // which clears the element's dates below.
         if ($value instanceof Schedule && !$value->isEmpty()) {
-            [$from, $to] = $value->occurrencesTableWindow();
+            $now = new DateTimeImmutable();
+            $timestamp = Db::prepareDateForDb($now);
 
-            $now = Db::prepareDateForDb(new DateTimeImmutable());
-
-            foreach ($value->between($from, $to) as $occurrence) {
+            foreach ($value->occurrencesTableDates($now) as $occurrence) {
                 $rows[] = [
                     'elementId' => $element->id,
                     'siteId' => $element->siteId,
@@ -74,8 +73,8 @@ class Occurrences extends Component
                     'cancelled' => $occurrence->cancelled,
                     'rescheduled' => $occurrence->rescheduled,
                     'note' => $occurrence->note,
-                    'dateCreated' => $now,
-                    'dateUpdated' => $now,
+                    'dateCreated' => $timestamp,
+                    'dateUpdated' => $timestamp,
                     'uid' => StringHelper::UUID(),
                 ];
             }

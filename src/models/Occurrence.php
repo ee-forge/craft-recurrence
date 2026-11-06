@@ -25,7 +25,7 @@ class Occurrence
      * @param DateTimeImmutable $end Actual end
      * @param DateTimeImmutable $originalStart Start before any reschedule
      * @param string $key Original key; overrides are stored under it
-     * @param bool $cancelled Still listed, but won't happen
+     * @param bool $cancelled Won't happen; left out of listings unless they include cancelled dates
      * @param string|null $note Editor's note for this date only
      * @param bool $rescheduled Whether an override changed its start or end
      * @param object|null $element The owning element (entry)

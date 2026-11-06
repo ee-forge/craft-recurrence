@@ -60,8 +60,8 @@ class OccurrenceQuery extends Query
     public ?int $siteId = null;
     /** Restrict to one Recurrence field, by handle. */
     public ?string $field = null;
-    /** Canceled dates are included by default, so listings can label them. */
-    public bool $includeCancelled = true;
+    /** Cancelled dates are left out by default; `includeCancelled()` lists them, e.g. to label them. */
+    public bool $includeCancelled = false;
     /** Eager-loading for the elements, as in element queries. */
     public array|string|null $with = null;
     /** Latest first instead of soonest first. */
@@ -139,7 +139,7 @@ class OccurrenceQuery extends Query
         return $this;
     }
 
-    /** Pass false to leave out canceled dates. */
+    /** Includes cancelled dates, which are left out by default; pass false to leave them out again. */
     public function includeCancelled(bool $value = true): static
     {
         $this->includeCancelled = $value;

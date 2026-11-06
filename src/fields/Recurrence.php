@@ -182,7 +182,8 @@ class Recurrence extends Field
 
         return Craft::$app->getView()->renderTemplate('recurrence/_field/preview.twig', [
             'schedule' => $value,
-            'occurrences' => $value->upcoming(self::PREVIEW_LIMIT),
+            // Editors see cancelled dates too, labelled as such.
+            'occurrences' => $value->upcoming(self::PREVIEW_LIMIT, true),
             'static' => true,
         ]);
     }

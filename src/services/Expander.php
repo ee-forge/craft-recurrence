@@ -35,7 +35,8 @@ class Expander
      * upcoming() and previous(), and so behind the occurrences table and the CP preview.
      *
      * @param int|null $limit At most this many (and never more than the schedule's maxOccurrences)
-     * @param bool $includeCancelled Whether cancelled dates are included (they're listed as cancelled by default)
+     * @param bool $includeCancelled Whether cancelled dates are included (left out by default)
+     * @param bool $latest Keep the last dates in the range rather than the first, when there are more than the limit
      * @return Occurrence[]
      */
     public static function between(
@@ -43,7 +44,8 @@ class Expander
         DateTimeInterface $from,
         DateTimeInterface $to,
         ?int $limit = null,
-        bool $includeCancelled = true,
+        bool $includeCancelled = false,
+        bool $latest = false,
     ): array {
         $first = $schedule->getStartLocal();
         if (!$first) {
@@ -63,9 +65,16 @@ class Expander
         $windowStart = $from->sub($span)->setTime(0, 0);
         $windowEnd = $to->setTime(23, 59, 59);
 
+        // The expansion is capped from the window's start. The window reaches
+        // back before $from for dates still ongoing, so leave room for those.
+        // For the last dates ($latest), a cap from the start would cut them
+        // off; expand the whole window (bounded by its dates, not a count)
+        // and trim from the end below.
+        $expansionCap = $latest ? null : $schedule->getMaxOccurrences() + count(self::originals($schedule, $windowStart, $from));
+
         // Every original date in the window, with its override applied.
         $occurrences = [];
-        foreach (self::originals($schedule, $windowStart, $windowEnd) as $key => $start) {
+        foreach (self::originals($schedule, $windowStart, $windowEnd, $expansionCap) as $key => $start) {
             $occurrences[$key] = self::build($schedule, $key, $start);
         }
 
@@ -83,7 +92,7 @@ class Expander
         self::assignUrlKeys($schedule, $occurrences, $windowStart, $windowEnd);
 
         // Trim the widened window back to the requested range (overlap, not
-        // containment), dropping canceled dates if asked.
+        // containment), dropping cancelled dates if asked.
         $result = array_filter($occurrences, fn(Occurrence $o) =>
             $o->end >= $from
             && $o->start < $to
@@ -92,9 +101,13 @@ class Expander
         // In start order; the key breaks ties so the order is stable.
         usort($result, fn(Occurrence $a, Occurrence $b) => [$a->start, $a->key] <=> [$b->start, $b->key]);
 
-        // Never more than the schedule's hard cap, whatever the caller asked.
+        // Never more than the schedule's hard cap, whatever the caller asked;
+        // the first dates, or the last ones when $latest.
         $cap = $schedule->getMaxOccurrences();
-        $limit = $limit !== null ? min($limit, $cap) : $cap;
+        $limit = max(0, $limit !== null ? min($limit, $cap) : $cap);
+        if ($latest) {
+            return $limit ? array_slice($result, -$limit) : [];
+        }
         return array_slice($result, 0, $limit);
     }
 
@@ -192,9 +205,10 @@ class Expander
      * occurrence key, with excluded dates removed. The raw rule expansion
      * every other method builds on; Ics also uses it to list excluded dates.
      *
+     * @param int|null $cap At most this many dates, from $from on; null for every date in the window
      * @return array<string, DateTimeImmutable>
      */
-    public static function originals(Schedule $schedule, DateTimeImmutable $from, DateTimeImmutable $to): array
+    public static function originals(Schedule $schedule, DateTimeImmutable $from, DateTimeImmutable $to, ?int $cap = null): array
     {
         $first = $schedule->getStartLocal();
         if (!$first || $to < $first) {
@@ -222,7 +236,7 @@ class Expander
 
         // Expand within the window, capped, back in the schedule's zone.
         $starts = [];
-        foreach ($set->getOccurrencesBetween($from, $to, $schedule->getMaxOccurrences()) as $dt) {
+        foreach ($set->getOccurrencesBetween($from, $to, $cap) as $dt) {
             $starts[] = DateTimeImmutable::createFromInterface($dt)->setTimezone($schedule->getTimeZone());
         }
 

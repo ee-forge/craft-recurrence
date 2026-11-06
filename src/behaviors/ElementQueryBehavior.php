@@ -17,7 +17,7 @@ use yii\base\InvalidArgumentException;
  *
  * {% set thisWeek = craft.entries.section('events').occursBetween(now, now|date_modify('+7 days')).all() %}
  *
- * It matches elements with at least one non-canceled occurrence overlapping
+ * It matches elements with at least one non-cancelled occurrence overlapping
  * the range; either bound may be null. Matching runs against the
  * occurrences table, so only saved (canonical) elements match, not drafts.
  *
@@ -42,7 +42,7 @@ class ElementQueryBehavior extends Behavior
     }
 
     /**
-     * Limits the query to elements with a non-canceled date overlapping
+     * Limits the query to elements with a non-cancelled date overlapping
      * `$from`–`$to`. Dates are anything Craft's date params accept; strings
      * without a zone mean site-local time. Returns the query for chaining.
      */
@@ -65,7 +65,7 @@ class ElementQueryBehavior extends Behavior
             return;
         }
 
-        // Rows for this element on this site, skipping canceled dates.
+        // Rows for this element on this site, skipping cancelled dates.
         $exists = (new Query())
             ->from(['occurrences' => Plugin::TABLE_OCCURRENCES])
             ->where('[[occurrences.elementId]] = [[elements.id]]')

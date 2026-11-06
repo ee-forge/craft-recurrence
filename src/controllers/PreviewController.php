@@ -66,16 +66,16 @@ class PreviewController extends Controller
         // How many dates to list, capped so "Show more" can't ask for the world.
         $limit = min(self::MAX_LIMIT, max(1, (int)$this->request->getBodyParam('limit', Recurrence::PREVIEW_LIMIT)));
 
-        // Upcoming dates; one extra tells whether "Show more" has anything to show.
-        $occurrences = $schedule->upcoming($limit + 1);
+        // Upcoming dates, cancelled ones included so editors see them; one
+        // extra tells whether "Show more" has anything to show.
+        $occurrences = $schedule->upcoming($limit + 1, true);
         $hasMore = count($occurrences) > $limit && $limit < self::MAX_LIMIT;
         $occurrences = array_slice($occurrences, 0, $limit);
         $past = false;
 
         if (!$occurrences && ($first = $schedule->getStartLocal())) {
             // The whole series is over; show its last dates instead.
-            $all = $schedule->between($first, new DateTimeImmutable());
-            $occurrences = array_slice($all, -$limit);
+            $occurrences = $schedule->between($first, new DateTimeImmutable(), $limit, true, latest: true);
             $past = true;
         }
 
