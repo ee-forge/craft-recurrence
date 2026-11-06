@@ -461,6 +461,25 @@ class ExpanderTest extends TestCase
         $this->assertTrue($s->getIsOpenEnded());
     }
 
+    public function testTimedDatesBeyondTheHorizonAreIncluded(): void
+    {
+        $s = $this->schedule([
+            'start' => '2026-11-22T17:30',
+            'end' => '2026-11-22T18:30',
+            'freq' => 'dates',
+            'rdates' => ['2027-11-21T17:30'],
+        ]);
+        $s->withLimits(1, 12, 1000);
+        $now = $this->at('2026-11-06');
+
+        $this->assertSame(['2026-11-22', '2027-11-21'], $this->keys($s->upcoming(now: $now)));
+        $this->assertSame(['2026-11-22', '2027-11-21'], $this->keys($s->occurrencesTableDates($now)));
+
+        $oneOff = $this->schedule(['start' => '2028-03-01T19:00', 'end' => '2028-03-01T20:00']);
+        $oneOff->withLimits(1, 12, 1000);
+        $this->assertSame(['2028-03-01'], $this->keys($oneOff->upcoming(now: $now)));
+    }
+
     public function testMaxOccurrencesCap(): void
     {
         $s = $this->schedule(['start' => '2026-01-01T08:00', 'freq' => 'daily']);

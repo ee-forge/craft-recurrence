@@ -649,9 +649,11 @@ class Schedule implements JsonSerializable, Stringable
         if ($this->hasRule() && $this->ends === self::ENDS_COUNT) {
             return $now->modify('+50 years');
         }
-        // Extra dates (and a far-future one-off) are always included.
+        // Extra dates (and a far-future one-off) are always included. Reach the
+        // end of their day: expansion excludes its end, so stopping at a timed
+        // date's own start would drop it.
         foreach (array_merge($this->rdates, [$this->start]) as $date) {
-            $dt = $this->parseLocal($date, true);
+            $dt = $this->parseLocal(substr((string)$date, 0, 10), true);
             if ($dt && $dt > $horizon) {
                 $horizon = $dt;
             }
