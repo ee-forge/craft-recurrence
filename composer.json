@@ -1,0 +1,59 @@
+{
+  "name": "ee-forge/craft-recurrence",
+  "description": "Recurring dates for native Craft entries, with indexed occurrences, dated URLs, per-date overrides and ICS feeds.",
+  "type": "craft-plugin",
+  "version": "1.0.0",
+  "license": "proprietary",
+  "authors": [
+    {
+      "name": "EE Forge",
+      "homepage": "https://ee-forge.com"
+    }
+  ],
+  "require": {
+    "php": ">=8.2",
+    "craftcms/cms": "^5.6.0",
+    "rlanvin/php-rrule": "^2.5"
+  },
+  "require-dev": {
+    "codeception/codeception": "^5.2",
+    "codeception/module-asserts": "^3.0",
+    "codeception/module-yii2": "^1.1.9",
+    "craftcms/ecs": "dev-main",
+    "craftcms/phpstan": "dev-main",
+    "phpstan/phpstan": "^2.3",
+    "rector/rector": "^2.0",
+    "vlucas/phpdotenv": "^5.4.1"
+  },
+  "autoload": {
+    "psr-4": {
+      "eeforge\\recurrence\\": "src/"
+    }
+  },
+  "extra": {
+    "handle": "recurrence",
+    "name": "Recurrence",
+    "developer": "EE Forge",
+    "developerUrl": "https://ee-forge.com",
+    "documentationUrl": "https://github.com/ee-forge/craft-recurrence",
+    "class": "eeforge\\recurrence\\Plugin"
+  },
+  "config": {
+    "allow-plugins": {
+      "craftcms/plugin-installer": true,
+      "php-http/discovery": true,
+      "yiisoft/yii2-composer": true
+    },
+    "sort-packages": true
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "scripts": {
+    "check-cs": "ecs check --ansi",
+    "fix-cs": "ecs check --ansi --fix",
+    "phpstan": "phpstan --memory-limit=1G",
+    "rector": "rector process --dry-run --ansi",
+    "fix-rector": "rector process --ansi",
+    "test": "codecept run"
+  }
+}

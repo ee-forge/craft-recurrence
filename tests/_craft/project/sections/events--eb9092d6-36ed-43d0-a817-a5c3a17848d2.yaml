@@ -1,0 +1,21 @@
+defaultPlacement: end
+enableVersioning: true
+entryTypes:
+  -
+    uid: 2b6519d9-7b6b-41ac-8ef4-04f85d56f002 # Event
+handle: events
+maxAuthors: 1
+minAuthors: 1
+name: Events
+previewTargets:
+  -
+    label: 'Primary entry page'
+    urlFormat: '{url}'
+propagationMethod: all
+siteSettings:
+  e0f8f959-cf31-450a-9ae0-d33d57e78ded: # Craft test site
+    enabledByDefault: true
+    hasUrls: true
+    template: events/_entry
+    uriFormat: 'events/{slug}'
+type: channel

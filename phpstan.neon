@@ -1,0 +1,16 @@
+includes:
+    - vendor/craftcms/phpstan/phpstan.neon
+
+parameters:
+    level: 5
+    paths:
+        - src
+    ignoreErrors:
+        # craft\db\Query::one() returns `TValue|null`, which already breaks
+        # yii\db\QueryInterface::one()'s `array|bool`; any subclass that
+        # overrides one() inherits the mismatch. Ours must override it to return
+        # a populated Occurrence rather than a raw row.
+        -
+            identifier: method.childReturnType
+            path: src/queries/OccurrenceQuery.php
+            count: 1
