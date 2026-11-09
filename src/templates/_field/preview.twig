@@ -1,0 +1,59 @@
+{#
+ # Upcoming-dates list, rendered by PreviewController (editable) and by the
+ # field's static HTML (read-only revisions). Dates are formatted in the
+ # schedule's own timezone, not the user's.
+ #
+ # Variables:
+ #   schedule     the Schedule being previewed
+ #   occurrences  the Occurrence models to list
+ #   past         true when the series is over and these are its last dates
+ #   hasMore      whether "Show more" has anything to add (editable only)
+ #   static       true for the read-only view: no actions, no "Show more"
+ #}
+{% set past = past ?? false %}
+{% set dayFormat = 'D, M j, Y' %}
+{% set timeFormat = 'g:i A' %}
+
+{% if occurrences is empty %}
+    <p class="light">{{ 'No upcoming dates.'|t('recurrence') }}</p>
+{% else %}
+    <p class="light smalltext">
+        {{ past ? 'This series has ended. Its last dates:'|t('recurrence') : 'Upcoming dates'|t('recurrence') }}
+    </p>
+    <ul class="recurrence-preview">
+        {% for occurrence in occurrences %}
+            {% set classes = ['recurrence-preview__row', occurrence.cancelled ? 'is-cancelled', occurrence.rescheduled ? 'is-rescheduled']|filter %}
+            {# The JS reads these: the original key that overrides are stored under, and the current times for the rescheduler. #}
+            <li class="{{ classes|join(' ') }}"
+                data-key="{{ occurrence.key }}"
+                data-start="{{ occurrence.start.format(schedule.allDay ? 'Y-m-d' : 'Y-m-d\\TH:i') }}"
+                data-end="{{ occurrence.end.format(schedule.allDay ? 'Y-m-d' : 'Y-m-d\\TH:i') }}">
+                <span class="recurrence-preview__date" id="{{ 'occ-' ~ occurrence.key ~ '-' ~ random() }}">
+                    {{ occurrence.start.format(dayFormat) }}
+                    {%- if not schedule.allDay %} · {{ occurrence.start.format(timeFormat) }}–{{ occurrence.end.format(timeFormat) }}{% endif %}
+                    {%- if occurrence.isMultiDay %} → {{ occurrence.end.format(dayFormat) }}{% endif %}
+                </span>
+                {% if occurrence.cancelled %}
+                    <span class="recurrence-preview__tag is-red">{{ 'Cancelled'|t('recurrence') }}</span>
+                {% endif %}
+                {% if occurrence.rescheduled %}
+                    <span class="recurrence-preview__tag">{{ 'Moved from {date}'|t('recurrence', {date: occurrence.originalStart.format('M j' ~ (schedule.allDay ? '' : ', g:i A'))}) }}</span>
+                {% endif %}
+                {% if occurrence.note %}
+                    <span class="recurrence-preview__note">{{ occurrence.note }}</span>
+                {% endif %}
+                {#
+                 # Per-date actions only make sense in a series; a one-off is edited through its start
+                 # and end. The JS fills this with a Craft action menu ("⋯"), as editable table rows have.
+                 #}
+                {% if not static and schedule.isRecurring %}
+                    <span class="recurrence-preview__actions" data-actions{{ occurrence.cancelled ? ' data-cancelled' }}{{ occurrence.note ? ' data-has-note' }}></span>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+    {# `hasMore` comes from PreviewController, which fetches one date past the list to know. #}
+    {% if not static and (hasMore ?? false) %}
+        <button type="button" class="btn small" data-action="more">{{ 'Show more'|t('recurrence') }}</button>
+    {% endif %}
+{% endif %}

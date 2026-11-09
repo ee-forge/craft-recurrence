@@ -1,0 +1,10 @@
+columnSuffix: null
+handle: eventSchedule
+instructions: null
+name: Schedule
+searchable: false
+tip: null
+translationKeyFormat: null
+translationMethod: none
+type: eeforge\recurrence\fields\Recurrence
+warning: null

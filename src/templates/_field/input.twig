@@ -1,0 +1,135 @@
+{#
+ # Recurrence field input.
+ #
+ # Only the hidden input has a name: the visible controls are unnamed and the
+ # JS (web/assets/input/dist/input.js) keeps the hidden JSON value in sync, so
+ # Craft's change detection and drafts see a single field value.
+ #
+ # `data-picker` elements are placeholders the JS fills with Craft's own date
+ # and time pickers (Craft.ui.createDateInput/createTimeInput), the same ones
+ # Date fields use; `data-label` becomes the picker's aria-label. Labels point
+ # at them with `data-for`, since the inputs don't exist until the JS runs.
+ # Like a Date field, each `data-datetime` wrapper holds a date and time pair
+ # and gets one clear button for both.
+ #
+ # Rendered by Recurrence::inputHtml(), which also starts the JS with the
+ # value and settings. Variables:
+ #   id    the input id (the JS gets the namespaced version)
+ #   name  the field handle, for the hidden input
+ #   json  the current value as JSON, or '' when empty
+ #}
+{% set weekdays = {MO: 'Mon'|t('recurrence'), TU: 'Tue'|t('recurrence'), WE: 'Wed'|t('recurrence'), TH: 'Thu'|t('recurrence'), FR: 'Fri'|t('recurrence'), SA: 'Sat'|t('recurrence'), SU: 'Sun'|t('recurrence')} %}
+
+<div id="{{ id }}" class="recurrence-input">
+    <input type="hidden" name="{{ name }}" value="{{ json }}" data-ref="value">
+
+    <div class="recurrence-input__grid">
+        <div class="recurrence-input__row">
+            <label class="recurrence-input__label" data-for="startDate">{{ 'Starts'|t('recurrence') }}</label>
+            <div class="datetimewrapper" data-datetime>
+                <div data-picker="startDate" data-kind="date" data-label="{{ 'Start date'|t('recurrence') }}"></div>
+                <div data-picker="startTime" data-kind="time" data-label="{{ 'Start time'|t('recurrence') }}"></div>
+            </div>
+        </div>
+
+        <div class="recurrence-input__row">
+            <label class="recurrence-input__label" data-for="endDate">{{ 'Ends'|t('recurrence') }}</label>
+            <div class="datetimewrapper" data-datetime>
+                <div data-picker="endDate" data-kind="date" data-label="{{ 'End date'|t('recurrence') }}"></div>
+                <div data-picker="endTime" data-kind="time" data-label="{{ 'End time'|t('recurrence') }}"></div>
+            </div>
+        </div>
+
+        <div class="recurrence-input__row">
+            <span class="recurrence-input__label"></span>
+            <label class="recurrence-input__check">
+                <input type="checkbox" data-ref="allDay"> {{ 'All day'|t('recurrence') }}
+            </label>
+        </div>
+
+        <div class="recurrence-input__row">
+            <label class="recurrence-input__label" for="{{ id }}-freq">{{ 'Repeats'|t('recurrence') }}</label>
+            <div class="flex flex-nowrap">
+                <div class="select">
+                    <select id="{{ id }}-freq" data-ref="freq">
+                        <option value="none">{{ 'Does not repeat'|t('recurrence') }}</option>
+                        <option value="daily">{{ 'Daily'|t('recurrence') }}</option>
+                        <option value="weekly">{{ 'Weekly'|t('recurrence') }}</option>
+                        <option value="monthly">{{ 'Monthly'|t('recurrence') }}</option>
+                        <option value="yearly">{{ 'Yearly'|t('recurrence') }}</option>
+                        <option value="dates">{{ 'On specific dates'|t('recurrence') }}</option>
+                    </select>
+                </div>
+                <span data-show="rule" class="flex flex-nowrap">
+                    <label for="{{ id }}-interval">{{ 'every'|t('recurrence') }}</label>
+                    <input type="number" min="1" max="99" class="text recurrence-input__num" id="{{ id }}-interval" data-ref="interval">
+                    <span data-ref="intervalUnit"></span>
+                </span>
+            </div>
+        </div>
+
+        <div class="recurrence-input__row" data-show="weekly">
+            <span class="recurrence-input__label">{{ 'On'|t('recurrence') }}</span>
+            <div class="btngroup recurrence-input__days" role="group" aria-label="{{ 'Days of the week'|t('recurrence') }}">
+                {% for code, label in weekdays %}
+                    <button type="button" class="btn small" data-day="{{ code }}" aria-pressed="false">{{ label }}</button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="recurrence-input__row" data-show="monthly">
+            <label class="recurrence-input__label" for="{{ id }}-monthly">{{ 'On'|t('recurrence') }}</label>
+            <div class="select">
+                <select id="{{ id }}-monthly" data-ref="monthlyMode">
+                    <option value="day"></option>
+                    <option value="nth"></option>
+                    <option value="last"></option>
+                </select>
+            </div>
+        </div>
+
+        <div class="recurrence-input__row" data-show="rule">
+            <label class="recurrence-input__label" for="{{ id }}-ends">{{ 'Series ends'|t('recurrence') }}</label>
+            <div class="flex flex-nowrap">
+                <div class="select">
+                    <select id="{{ id }}-ends" data-ref="ends">
+                        <option value="never">{{ 'Never'|t('recurrence') }}</option>
+                        <option value="until">{{ 'On date'|t('recurrence') }}</option>
+                        <option value="count">{{ 'After'|t('recurrence') }}</option>
+                    </select>
+                </div>
+                <div class="datetimewrapper" data-datetime data-ref="untilWrap">
+                    <div data-picker="until" data-kind="date" data-label="{{ 'Last date'|t('recurrence') }}"></div>
+                </div>
+                <span data-ref="countWrap" class="flex flex-nowrap">
+                    <input type="number" min="1" max="1000" class="text recurrence-input__num" data-ref="count" aria-label="{{ 'Number of times'|t('recurrence') }}">
+                    <span>{{ 'times'|t('recurrence') }}</span>
+                </span>
+            </div>
+        </div>
+
+        <div class="recurrence-input__row" data-show="extra">
+            <span class="recurrence-input__label" data-ref="rdatesLabel">{{ 'Extra dates'|t('recurrence') }}</span>
+            <div>
+                <ul class="recurrence-input__list" data-ref="rdates"></ul>
+                <button type="button" class="btn dashed add icon" data-action="add-rdate">{{ 'Add a date'|t('recurrence') }}</button>
+            </div>
+        </div>
+
+        <div class="recurrence-input__row" data-show="rule">
+            <span class="recurrence-input__label">{{ 'Skip dates'|t('recurrence') }}</span>
+            <div>
+                <ul class="recurrence-input__list" data-ref="exdates"></ul>
+                <button type="button" class="btn dashed add icon" data-action="add-exdate">{{ 'Skip a date'|t('recurrence') }}</button>
+            </div>
+        </div>
+    </div>
+
+    <ul class="errors" data-ref="errors" hidden></ul>
+
+    <div class="recurrence-input__preview" data-ref="previewWrap" hidden>
+        <p class="recurrence-input__summary" data-ref="summary"></p>
+        <div data-ref="preview"></div>
+        <div data-ref="overrides"></div>
+    </div>
+</div>

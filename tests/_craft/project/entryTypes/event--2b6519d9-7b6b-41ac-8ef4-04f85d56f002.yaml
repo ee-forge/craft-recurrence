@@ -1,0 +1,43 @@
+allowLineBreaksInTitles: false
+color: null
+description: null
+fieldLayouts:
+  7013d111-67c8-41cc-86d3-6d2c5fcb344f:
+    cardThumbAlignment: end
+    tabs:
+      -
+        elementCondition: null
+        elements:
+          -
+            dateAdded: null
+            editCondition: null
+            elementCondition: null
+            elementEditCondition: null
+            fieldUid: 0117e3b4-4a8b-4142-b399-f4b5999c9e61 # Schedule
+            handle: null
+            instructions: null
+            label: null
+            oldFieldUid: null
+            required: false
+            tip: null
+            type: craft\fieldlayoutelements\CustomField
+            uid: f5c4411a-8fcc-4cfc-a182-096812b1b078
+            userCondition: null
+            warning: null
+            width: 100
+        name: Content
+        uid: d024b4d1-90cb-43c9-8122-7e0a8edfe641
+        userCondition: null
+    thumbFieldKey: null
+handle: event
+hasTitleField: false
+icon: null
+name: Event
+showSlugField: true
+showStatusField: true
+slugTranslationKeyFormat: null
+slugTranslationMethod: site
+titleFormat: null
+titleTranslationKeyFormat: null
+titleTranslationMethod: site
+uiLabelFormat: '{title}'
